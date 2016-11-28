@@ -41,13 +41,12 @@ tic
         fir.n = 1:fir.NT; %Rect index of abscisse, handle odd or even fir.NT 
     else
         fir.t = ceil(-fir.NT/2+0.5) : floor(fir.NT/2);
-        fir.n = 0:fir.NT-0.5; %Rect index of abscisse, handle odd or even fir.NT 
+        fir.n = 0.5:fir.NT-0.5; %Rect index of abscisse, handle odd or even fir.NT 
     end
     fir.freq=FreqVect(ct.FS,ct.NFFT);
     
-%     fir.BlackMan = 0.42 - 0.5*cos(2*pi*fir.n/fir.NT) + 0.08*cos(4*pi*fir.n/fir.NT) ;% Blackman windows 
-    fir.BlackMan = 0.42 - 0.5*cos(2*pi*(fir.n-fir.NT/2)/fir.NT) + 0.08*cos(4*pi*fir.n/fir.NT) ;% Blackman windows 
-
+    fir.BlackMan = 0.42 - 0.5*cos(2*pi*fir.n/fir.NT) + 0.08*cos(4*pi*fir.n/fir.NT) ;% Blackman windows 
+    
     fir.lowPass = sinc(pi.*fir.t*fir.BW/pi).*fir.BW ;% generate filter
     fir.lowPassBM = fir.BlackMan .* fir.lowPass; %windowed sinc
  
@@ -55,20 +54,22 @@ tic
                    - sinc(pi*fir.BW1*(fir.t)/pi) .* fir.BW1 ;
     fir.bandpassBM =  fir.bandpass .* fir.BlackMan;  
 
-    fir.highpass = -fir.lowPass;
-    fir.highpass(round(fir.NT/2))=1+fir.highpass(round(fir.NT/2));%% spectral inversion , handle odd or even NT
-    fir.highPassBM = fir.highpass .* fir.BlackMan;  
+    fir.highPass = -fir.lowPass;
+    fir.highPass(round(fir.NT/2))=1+fir.highPass(round(fir.NT/2));%% spectral inversion , handle odd or even NT
+    fir.highPassBM = fir.highPass .* fir.BlackMan;  
 toc
  %%  frequency shift : mirroring by fs/2
 %      test=ones(1,fir.NT);
 %      test(2:2:end)=-test(2:2:end);
-%      fir.lowPass = fir.lowPass.*test;%--->shift low pass to highpass  by half fs,
-%                                         cut off being fs/2-bw
+%      fir.lowPass = fir.lowPassBM.*test;%--->shift low pass to highPass  by half fs,
+%                                         %%cut off being fs/2-bw
+%      fir.highPass = fir.highPassBM.*test;
+                                        
 %      fir.lowPassBM = fir.lowPassBM.*test;
  %%  frequency shift : move the filter by X Hz       
 %     mv=8000/ct.NY;% move 4000 Hz
 %     test= cos(fir.n*pi*mv); %filter= lowpass shifted by 1000Hz
-%      fir.lowPass = fir.lowPass.*test;%--->shift low pass to highpass  by half fs,
+%      fir.lowPass = fir.lowPass.*test;%--->shift low pass to highPass  by half fs,
 %                                         %cut off being fs/2-bw
 %      fir.lowPassBM = fir.lowPassBM.*test;
                                         
@@ -100,7 +101,7 @@ tic
     figure(2)
         subplot(211);
                 title('High pass sinc filters')
-            plot(fir.t,fir.highpass);
+            plot(fir.t,fir.highPass);
                 xlabel('Sample');ylabel('Amplitude')
                 xlim([fir.t(1) fir.t(end)]);
             hold on;
@@ -108,7 +109,7 @@ tic
             grid on ;
                 legend('Rect','Blackman')
         subplot(212)
-            plot(fir.freq,db(abs(fft(fir.highpass,ct.NFFT))));
+            plot(fir.freq,db(abs(fft(fir.highPass,ct.NFFT))));
             hold on;
             plot(fir.freq,db(abs(fft(fir.highPassBM,ct.NFFT))));
                 xlabel('Frequency [Hz]');ylabel('Amplitude[dB]')
@@ -143,14 +144,14 @@ tic
              legend('Rect','Blackman')
     %merge
     figure(4)
-        semilogx(fir.freq,db(abs(fft(fir.lowPass,ct.NFFT))+abs(fft(fir.highpass,ct.NFFT))));
+        semilogx(fir.freq,db(abs(fft(fir.lowPass,ct.NFFT))+abs(fft(fir.highPass,ct.NFFT))));
             xlabel('Sample');ylabel('Amplitude')
             xlim([fir.t(1) fir.t(end)]);
         hold on;
         semilogx(fir.freq,db(abs(fft(fir.lowPassBM,ct.NFFT))+abs(fft(fir.highPassBM,ct.NFFT))));
             xlabel('Frequency [Hz]');ylabel('Amplitude [dB]')
             xlim([0 ct.NY]);    
-            %ylim([-1 max(db(abs(fft(fir.lowPass))+abs(fft(fir.highpass))))]);
+            %ylim([-1 max(db(abs(fft(fir.lowPass))+abs(fft(fir.highPass))))]);
         grid on
         legend('Rect','Blackman');
         title('Merging of sinc filters')
@@ -177,6 +178,7 @@ toc
         plot(fir.freq,db(abs(fft(fir.lowPass.*win.hamming.',ct.NFFT))));
         plot(fir.freq,db(abs(fft(fir.lowPass.*win.hanning.',ct.NFFT))));
             legend('Rect','Bartlett','Blackman','Hamming','Hanning')
+             xlabel('Frequency [Hz]');ylabel('Amplitude [dB]')
             ylim([-100 1])
             xlim([20 ct.NY])
 
